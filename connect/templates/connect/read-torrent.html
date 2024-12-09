@@ -1,0 +1,15 @@
+{% extends "connect/layout.html" %}
+
+{% load static %}
+
+{% block extra_js %}
+<script src="{% static 'connect/js/read-torrent.js' %}"></script>
+{% endblock %}
+
+{% block body %}
+
+<h1>Read Torrent</h1>
+<input type="file" id="torrent-file-input" accept=".torrent" />
+<pre id="torrent-info"></pre>
+
+{% endblock %}
