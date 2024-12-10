@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		fetch("/create-torrent", {
 			method: "POST",
 			body: new URLSearchParams({
-				"file-name": file.name,
+				filename: file.name,
 			}),
 		})
 			.then((response) => response.json())

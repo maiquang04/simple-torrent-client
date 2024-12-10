@@ -11,9 +11,8 @@ from django.views.decorators.csrf import csrf_exempt
 import os
 import bencodepy
 import json
-import base64
 
-from .configs import CONFIGS
+from . import torrent_utils
 
 
 def index(request):
@@ -59,26 +58,6 @@ def clear_peer_info(request):
     return JsonResponse({"success": False})
 
 
-# Function to recursively decode byte strings into normal strings or base64 encode bytes
-def decode_bytes(data):
-    if isinstance(data, dict):
-        return {
-            decode_bytes(key): decode_bytes(value)
-            for key, value in data.items()
-        }
-    elif isinstance(data, list):
-        return [decode_bytes(item) for item in data]
-    elif isinstance(data, bytes):
-        try:
-            # Try decoding bytes to string if it's UTF-8 text
-            return data.decode("utf-8")
-        except UnicodeDecodeError:
-            # If it's not valid UTF-8, base64 encode it to make it JSON serializable
-            return base64.b64encode(data).decode("utf-8")
-    else:
-        return data
-
-
 @csrf_exempt
 def read_torrent(request):
     if request.method == "POST" and request.FILES.get("torrent_file"):
@@ -95,7 +74,7 @@ def read_torrent(request):
                 torrent_data = bencodepy.decode(f.read())
 
             # Recursively decode byte keys to strings where possible
-            decoded_data = decode_bytes(torrent_data)
+            decoded_data = torrent_utils.decode_bytes(torrent_data)
 
             # Remove the temporary file after processing
             os.remove(file_path)
@@ -120,9 +99,22 @@ def create_torrent(request):
     peer_directory = request.session.get("peer_directory", None)
 
     if request.method == "POST":
-        file_name = request.POST.get("file-name")
-        print(file_name)
-        if file_name:
+        filename = request.POST.get("filename")
+        print(filename)
+        if filename:
+            torrent_data = torrent_utils.create_torrent_data(
+                peer_id=peer_id, current_dir=peer_directory, filename=filename
+            )
+            print("Torrent data: ")
+            print(torrent_data)
+            torrent_file_path = torrent_utils.save_torrent_file_to_dir(
+                torrent_data=torrent_data, destination_dir=peer_directory
+            )
+            print("Torrent file path: " + torrent_file_path)
+            is_success, message = torrent_utils.upload_torrent_data_to_tracker(
+                torrent_data
+            )
+            print("is success:", is_success, "message:", message)
             return JsonResponse({"success": True})
         return JsonResponse({"success": False})
 

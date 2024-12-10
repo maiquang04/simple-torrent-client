@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		formData.append("torrent_file", file);
 
 		// Send the file to the backend
-		fetch("/read-torrent/", {
+		fetch("/read-torrent", {
 			method: "POST",
 			body: formData,
 		})
