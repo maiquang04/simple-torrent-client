@@ -6,6 +6,9 @@ document.addEventListener("DOMContentLoaded", function () {
 	form.addEventListener("submit", function (event) {
 		event.preventDefault();
 
+		statusMessage.textContent = "";
+		statusDiv.style.display = "none";
+
 		const fileInput = document.getElementById("file-input");
 		const file = fileInput.files[0];
 
