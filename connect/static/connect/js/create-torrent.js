@@ -14,6 +14,13 @@ document.addEventListener("DOMContentLoaded", function () {
 			return;
 		}
 
+		// Disable the file input and submit button to prevent further clicks
+		fileInput.disabled = true;
+
+		// Optionally, show a loading message or spinner
+		statusMessage.textContent = "Creating torrent, please wait...";
+		statusDiv.style.display = "block";
+
 		// Send the file to the backend via POST
 		fetch("/create-torrent", {
 			method: "POST",
@@ -34,6 +41,13 @@ document.addEventListener("DOMContentLoaded", function () {
 			.catch((error) => {
 				statusMessage.textContent = "Error: " + error.message;
 				statusDiv.style.display = "block";
+			})
+			.finally(() => {
+				// Clear the file input after the process is complete
+				fileInput.value = "";
+
+				// Re-enable the file input after the operation is complete
+				fileInput.disabled = false;
 			});
 	});
 });
