@@ -4,5 +4,8 @@ from . import views
 
 urlpatterns = [
     path("", views.index, name="index"),
-    path("read-torrent/", views.read_torrent, name="read-torrent"),
+    path("set-peer-info", views.set_peer_info, name="set-peer-info"),
+    path("clear-peer-info", views.clear_peer_info, name="clear-peer-info"),
+    path("read-torrent", views.read_torrent, name="read-torrent"),
+    path("create-torrent", views.create_torrent, name="create-torrent"),
 ]

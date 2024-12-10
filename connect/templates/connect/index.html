@@ -2,8 +2,49 @@
 
 {% load static %}
 
+{% block extra_js %}
+<script src="{% static 'connect/js/index.js' %}"></script>
+{% endblock %}
+
 {% block body %}
 
 <h1>Simple Client</h1>
+
+<!-- Form to input peer information -->
+<form id="peer-info-form" method="POST">
+    {% csrf_token %}
+    <label for="peer-id">Peer ID:</label>
+    <input type="text" id="peer-id" name="peer-id" value="" required><br><br>
+
+    <label for="peer-directory">Peer Directory:</label>
+    <input type="text" id="peer-directory" name="peer-directory" value="" required><br><br>
+
+    <button class="btn btn-primary" type="submit">Save Info</button>
+</form>
+
+<!-- Display the saved peer information -->
+
+<div id="peer-info" style="display:block;">
+    <p>
+        <strong>Peer ID: </strong>
+        <span id="display-peer-id">
+            {% if peer_id %}
+            {{ peer_id }}
+            {% endif %}
+        </span>
+    </p>
+    <p>
+        <strong>Peer Directory: </strong>
+        <span id="display-peer-directory">
+            {% if peer_directory %}
+            {{ peer_directory }}
+            {% endif %}
+        </span>
+    </p>
+</div>
+
+<a href="{% url 'index' %}" class="btn btn-primary" id="clear-peer-info" style="display: inline;">Clear Info</a>
+
+<!-- Button to clear peer info -->
 
 {% endblock %}

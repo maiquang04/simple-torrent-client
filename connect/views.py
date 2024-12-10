@@ -13,9 +13,50 @@ import bencodepy
 import json
 import base64
 
+from .configs import CONFIGS
+
 
 def index(request):
-    return render(request, "connect/index.html")
+    # Get peer info from session
+    peer_id = request.session.get("peer_id", None)
+    peer_directory = request.session.get("peer_directory", None)
+
+    # Pass peer info to template
+    return render(
+        request,
+        "connect/index.html",
+        {"peer_id": peer_id, "peer_directory": peer_directory},
+    )
+
+
+@csrf_exempt
+def set_peer_info(request):
+    if request.method == "POST":
+        peer_id = request.POST.get("peer-id")
+        peer_directory = request.POST.get("peer-directory")
+
+        # Save peer info to session
+        request.session["peer_id"] = peer_id
+        request.session["peer_directory"] = peer_directory
+
+        return JsonResponse({"success": True})
+
+    return JsonResponse({"success": False})
+
+
+# Clear peer info if requested
+@csrf_exempt
+def clear_peer_info(request):
+    if request.method == "POST":
+        # Remove peer info from session
+        if "peer_id" in request.session:
+            del request.session["peer_id"]
+        if "peer_directory" in request.session:
+            del request.session["peer_directory"]
+
+        return JsonResponse({"success": True})
+
+    return JsonResponse({"success": False})
 
 
 # Function to recursively decode byte strings into normal strings or base64 encode bytes
@@ -70,3 +111,23 @@ def read_torrent(request):
             return JsonResponse({"error": str(e)}, status=400)
 
     return render(request, "connect/read-torrent.html")
+
+
+@csrf_exempt
+def create_torrent(request):
+    # Get peer info from session
+    peer_id = request.session.get("peer_id", None)
+    peer_directory = request.session.get("peer_directory", None)
+
+    if request.method == "POST":
+        file_name = request.POST.get("file-name")
+        print(file_name)
+        if file_name:
+            return JsonResponse({"success": True})
+        return JsonResponse({"success": False})
+
+    return render(
+        request,
+        "connect/create-torrent.html",
+        {"peer_id": peer_id, "peer_directory": peer_directory},
+    )
