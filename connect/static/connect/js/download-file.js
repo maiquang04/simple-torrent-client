@@ -1,7 +1,6 @@
 import { Configs } from "./configs.js";
 
 document.addEventListener("DOMContentLoaded", function () {
-	console.log("Hello");
 	const downloadButton = document.getElementById("download-btn");
 	const torrentForm = document.getElementById("torrent-form");
 	const statusMessage = document.getElementById("status-message");
