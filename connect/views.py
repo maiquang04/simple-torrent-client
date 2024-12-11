@@ -153,3 +153,11 @@ def download_file(request):
         "connect/download-file.html",
         {"peer_id": peer_id, "peer_directory": peer_directory},
     )
+
+
+def get_peer_id(request):
+    peer_id = request.session.get("peer_id", None)
+
+    if peer_id:
+        return JsonResponse({"peerId": request.session["peer_id"]}, status=200)
+    return JsonResponse({"error": "Peer ID not found"}, status=400)

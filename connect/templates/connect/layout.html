@@ -47,8 +47,14 @@
     <hr>
 
     <main class="p-md-3 container">
+        <p id="peer-init-message"></p>
         {% block body%}{% endblock %}
     </main>
+
+
+    <script type="module" src="{% static 'connect/js/configs.js' %}"></script>
+
+    <script type="module" src="{% static 'connect/js/global.js' %}"></script>
 
     <!-- Additional Javascript -->
     {% block extra_js %}{% endblock %}
