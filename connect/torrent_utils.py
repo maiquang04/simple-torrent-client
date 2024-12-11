@@ -103,7 +103,9 @@ def upload_torrent_data_to_tracker(
         if response.status_code == 200:
             response_data = response.json()
             if response_data.get("success"):
-                return True, "Torrent uploaded successfully"
+                # Extract creation_date from the response, if available
+                creation_date = response_data.get("creation date")
+                return True, creation_date
             else:
                 return False, "Failed to upload torrent"
         else:

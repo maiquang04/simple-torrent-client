@@ -107,16 +107,31 @@ def create_torrent(request):
             )
             print("Torrent data: ")
             print(torrent_data)
-            torrent_file_path = torrent_utils.save_torrent_file_to_dir(
-                torrent_data=torrent_data, destination_dir=peer_directory
+
+            is_success, creation_date_or_message = (
+                torrent_utils.upload_torrent_data_to_tracker(torrent_data)
             )
-            print("Torrent file path: " + torrent_file_path)
-            is_success, message = torrent_utils.upload_torrent_data_to_tracker(
-                torrent_data
+            print(
+                "is success:", is_success, "message:", creation_date_or_message
             )
-            print("is success:", is_success, "message:", message)
-            return JsonResponse({"success": True})
-        return JsonResponse({"success": False})
+
+            if is_success:
+                # Add creation date to torrent_data
+                torrent_data["creation date"] = creation_date_or_message
+
+                torrent_file_path = torrent_utils.save_torrent_file_to_dir(
+                    torrent_data=torrent_data, destination_dir=peer_directory
+                )
+                print("Torrent file path: " + torrent_file_path)
+
+                return JsonResponse({"success": True})
+            else:
+                print("Error: ", creation_date_or_message)
+                return JsonResponse(
+                    {"success": False, "error": creation_date_or_message}
+                )
+
+        return JsonResponse({"success": False, "error": "Filename is required"})
 
     return render(
         request,
