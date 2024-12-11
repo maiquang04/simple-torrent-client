@@ -11,8 +11,10 @@ from django.views.decorators.csrf import csrf_exempt
 import os
 import bencodepy
 import json
+import requests
 
 from . import torrent_utils
+from .configs import CONFIGS
 
 
 def index(request):
@@ -61,6 +63,7 @@ def clear_peer_info(request):
 @csrf_exempt
 def read_torrent(request):
     if request.method == "POST" and request.FILES.get("torrent_file"):
+        print("At read_torrent")
         torrent_file = request.FILES["torrent_file"]
 
         # Save the torrent file temporarily
@@ -136,5 +139,17 @@ def create_torrent(request):
     return render(
         request,
         "connect/create-torrent.html",
+        {"peer_id": peer_id, "peer_directory": peer_directory},
+    )
+
+
+def download_file(request):
+    # Get peer info from session
+    peer_id = request.session.get("peer_id", None)
+    peer_directory = request.session.get("peer_directory", None)
+
+    return render(
+        request,
+        "connect/download-file.html",
         {"peer_id": peer_id, "peer_directory": peer_directory},
     )
