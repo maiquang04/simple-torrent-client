@@ -28,7 +28,7 @@ function initializePeer(peerId) {
 	});
 }
 
-function handleIncomingRequest(conn, data) {
+async function handleIncomingRequest(conn, data) {
 	if (data.type === "request") {
 		// Logic for handling piece request (JSON data)
 		const { file_length, filename, file_directory, file_path, piece_length, piece_range, piece_hashes, sender_peer_id } = data;
@@ -36,11 +36,14 @@ function handleIncomingRequest(conn, data) {
 		console.log(`Received request from ${sender_peer_id} from piece index: ${piece_range[0]["piece_index"]} to piece index: ${piece_range.at(-1)["piece_index"]}.`);
 
 		// Iterate through piece_range to fetch and send each piece
-		piece_range.forEach((piece) => {
+		for (const piece of piece_range) {
 			const { piece_index, piece_hash } = piece;
 
-			getPiece(file_length, filename, file_directory, file_path, piece_length, piece_hash, piece_index)
-				.then((pieceData) => {
+			try {
+				// Await the result of getPiece to resolve the binary data
+				const pieceData = await getPiece(file_length, filename, file_directory, file_path, piece_length, piece_hash, piece_index);
+
+				if (pieceData) {
 					// Send back the resolved piece data
 					conn.send({
 						type: "piece",
@@ -52,16 +55,22 @@ function handleIncomingRequest(conn, data) {
 						piece_hash: piece_hash,
 						piece_hashes: piece_hashes,
 					});
-				})
-				.catch((error) => {
-					console.error(`Failed to fetch piece ${piece_index}:`, error);
-					// Optionally, send an error response back to the requester
+				} else {
+					// Handle error if piece data is null (failure in fetching)
 					conn.send({
 						type: "error",
 						message: `Failed to fetch piece ${piece_index}`,
 					});
+				}
+			} catch (error) {
+				console.error(`Failed to fetch piece ${piece_index}:`, error);
+				// Optionally, send an error response back to the requester
+				conn.send({
+					type: "error",
+					message: `Failed to fetch piece ${piece_index}`,
 				});
-		});
+			}
+		}
 	} else if (data.type === "piece") {
 		// Logic for handling file data (binary file)
 		console.log(`Received file data from ${data.sender_peer_id}`);
