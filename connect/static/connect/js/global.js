@@ -1,4 +1,5 @@
 import { Configs } from "./configs.js";
+import { stopTimer } from "./download-file.js";
 
 let peer = null;
 let connections = {};
@@ -168,6 +169,16 @@ async function handleReceivedPiece(pieceData, filename, fileLength, pieceLength,
 
 		const result = await response.json();
 		console.log(`Server response for piece ${pieceIndex}:`, result);
+
+		// Check the response message
+		if (result.message === "File assembled and seeded successfully.") {
+			console.log("Download completed successfully.");
+			stopTimer(); // Stop the timer if file is assembled and seeded
+		} else if (result.message === "File assembled but failed to seed.") {
+			console.log("Download assembled but failed to seed.");
+			stopTimer(); // Stop the timer if file is assembled but seeding failed
+		}
+
 		return result;
 	} catch (error) {
 		console.error(`Failed to send piece ${pieceIndex}:`, error);

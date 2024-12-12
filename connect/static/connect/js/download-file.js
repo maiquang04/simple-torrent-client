@@ -2,6 +2,9 @@ import { Configs } from "./configs.js";
 
 let connections = {};
 let activePeers = [];
+let timerStart = 0;
+let timerInterval = null;
+const updateTimerInterval = 1; // 0.1s
 
 document.addEventListener("DOMContentLoaded", function () {
 	const downloadButton = document.getElementById("download-btn");
@@ -28,6 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			};
 		}
 
+		startTimer();
 		isFetching = true; // Set flag to indicate fetch is in progress
 		const formData = new FormData(torrentForm);
 
@@ -187,4 +191,27 @@ function sendPieceRequest(connection, pieceRange, pieces, torrentMeta) {
 
 	console.log(`Sending request to peer ${connection.peer}:`, requestData);
 	connection.send(requestData);
+}
+
+function startTimer() {
+	if (timerInterval) {
+		clearInterval(timerInterval);
+	}
+
+	timerStart = performance.now();
+	timerInterval = setInterval(updateTimer, updateTimerInterval);
+}
+
+export function stopTimer() {
+	if (timerInterval) {
+		clearInterval(timerInterval);
+		timerInterval = null;
+	}
+	const elapsedTime = (performance.now() - timerStart) / 1000;
+	console.log(`Download finished in ${elapsedTime.toFixed(3)} seconds.`);
+}
+
+function updateTimer() {
+	const elapsedTime = (performance.now() - timerStart) / 1000;
+	document.getElementById("elapsed-time").innerText = `${elapsedTime.toFixed(3)}`;
 }

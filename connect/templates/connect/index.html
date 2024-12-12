@@ -14,10 +14,10 @@
 <form id="peer-info-form" method="POST">
     {% csrf_token %}
     <label for="peer-id">Peer ID:</label>
-    <input type="text" id="peer-id" name="peer-id" value="" required><br><br>
+    <input type="text" id="peer-id" style="width: 500px; height: 40px;" name="peer-id" value="" required><br><br>
 
     <label for="peer-directory">Peer Directory:</label>
-    <input type="text" id="peer-directory" name="peer-directory" value="" required><br><br>
+    <input type="text" id="peer-directory" style="width: 500px; height: 40px;" name="peer-directory" value="" required><br><br>
 
     <button class="btn btn-primary" type="submit">Save Info</button>
 </form>

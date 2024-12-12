@@ -285,6 +285,14 @@ def handle_received_piece(request):
                     os.remove(os.path.join(peer_directory, f"{h}.bin"))
 
                 # Send request to tracker to seed file
+                # Test
+                return JsonResponse(
+                    {
+                        "message": "File assembled and seeded successfully.",
+                        "file_path": assembled_file_path,
+                    }
+                )
+
                 # TODO
                 success, message = (
                     torrent_utils.send_request_to_seed_file_to_tracker(
