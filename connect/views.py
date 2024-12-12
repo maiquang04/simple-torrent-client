@@ -12,6 +12,8 @@ import os
 import bencodepy
 import json
 import requests
+import hashlib
+
 
 from . import torrent_utils
 from .configs import CONFIGS
@@ -167,3 +169,123 @@ def file_transfer(request):
     peer_id = request.session.get("peer_id", None)
 
     return render(request, "connect/file-transfer.html", {"peer_id": peer_id})
+
+
+@csrf_exempt
+def get_piece(request):
+    """
+    Serves a specific piece of a file based on the requested byte range.
+    """
+    if request.method == "POST":
+        try:
+            # Extract required fields from the request
+            file_path = request.POST.get("file_path")
+            piece_length = int(request.POST.get("piece_length", 0))
+            piece_index = int(request.POST.get("piece_index", 0))
+            piece_hash = request.POST.get("piece_hash")
+
+            if not file_path or not piece_hash:
+                return JsonResponse(
+                    {"error": "Missing required parametes"}, status=400
+                )
+
+            try:
+                # Calculate byte range for the requested piece
+                offset = piece_index * piece_length
+
+                # Read the piece from the file
+                with open(file_path, "rb") as file:
+                    file.seek(offset)
+                    piece_data = file.read(piece_length)
+
+                # Verify the integrity of the piece
+                computed_hash = hashlib.sha1(piece_data).hexdigest()
+                if computed_hash != piece_hash:
+                    return JsonResponse(
+                        {"error": "Piece hash mismatch"}, status=400
+                    )
+
+                # Return the piece data as a binary response
+                response = HttpResponse(
+                    piece_data, content_type="application/octet-stream"
+                )
+                response["Content-Disposition"] = (
+                    f'attachment; filename="{piece_hash}.bin"'
+                )
+                return response
+
+            except FileNotFoundError:
+                return JsonResponse({"error": "File not found"}, status=404)
+            except Exception as e:
+                return JsonResponse({"error": str(e)}, status=500)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"error": "Invalid request method."}, status=405)
+
+
+@csrf_exempt
+def handle_received_piece(request):
+    """
+    Handles a received piece, saves it as a file, and assembles the original file if all pieces are present.
+    """
+    if request.method == "POST":
+        try:
+            # Extract data from the request
+            piece_data = request.FILES.get("piece_data")
+            piece_hash = request.POST.get("piece_hash")
+            piece_hashes = request.POST.getlist("piece_hashes")
+            filename = request.POST.get("filename")
+
+            if (
+                not piece_data
+                or not piece_hash
+                or not piece_hashes
+                or not filename
+            ):
+                return JsonResponse(
+                    {"error": "Missing required data."}, status=400
+                )
+
+            # Save the piece as a binary file
+            peer_directory = request.session.get("peer_directory", None)
+            piece_file_path = os.path.join(peer_directory, f"{piece_hash}.bin")
+            with open(piece_file_path, "wb") as f:
+                for chunk in piece_data.chunks():
+                    f.write(chunk)
+
+            assembled_file_path = os.path.join(peer_directory, filename)
+            if all(
+                os.path.exists(os.path.join(peer_directory, f"{h}.bin"))
+                for h in piece_hashes
+            ):
+                # Assemble the file from all pieces
+                with open(assembled_file_path, "wb") as assembled_file:
+                    for h in piece_hashes:
+                        piece_path = os.path.join(peer_directory, f"{h}.bin")
+                        with open(piece_path, "rb") as piece_file:
+                            assembled_file.write(piece_file.read())
+
+                # Optionally, clean up the individual piece files
+                for h in piece_hashes:
+                    os.remove(os.path.join(peer_directory, f"{h}.bin"))
+
+                # Send request to tracker to seed file
+                # TODO
+
+                return JsonResponse(
+                    {
+                        "message": "File assembled successfully.",
+                        "file_path": assembled_file_path,
+                    }
+                )
+
+            return JsonResponse(
+                {"message": "Piece received and saved successfully."}
+            )
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"error": "Invalid request method."}, status=405)

@@ -31,7 +31,7 @@ function initializePeer(peerId) {
 function handleIncomingRequest(conn, data) {
 	if (data.type === "request") {
 		// Logic for handling piece request (JSON data)
-		const { file_length, filename, file_directory, file_path, piece_length, piece_range, sender_peer_id } = data;
+		const { file_length, filename, file_directory, file_path, piece_length, piece_range, piece_hashes, sender_peer_id } = data;
 
 		console.log(`Received request from ${sender_peer_id} from piece index: ${piece_range[0]["piece_index"]} to piece index: ${piece_range.at(-1)["piece_index"]}.`);
 
@@ -49,6 +49,7 @@ function handleIncomingRequest(conn, data) {
 				piece_length: piece_length,
 				piece_index: piece_index,
 				piece_hash: piece_hash,
+				piece_hashes: piece_hashes,
 			});
 		});
 	} else if (data.type === "piece") {
@@ -56,7 +57,7 @@ function handleIncomingRequest(conn, data) {
 		console.log(`Received file data from ${data.sender_peer_id}`);
 
 		// Handle piece data (binary)
-		handleReceivedPiece(data.piece_data, data.filename, data.file_length, data.piece_length, data.piece_index, data.piece_hash);
+		handleReceivedPiece(data.piece_data, data.filename, data.file_length, data.piece_length, data.piece_index, data.piece_hash, data.piece_hashes);
 	} else {
 		console.error("Unknown data type received:", data);
 	}
@@ -69,7 +70,7 @@ function getPiece(fileLength, filename, fileDirectory, filePath, pieceLength, pi
 	return str;
 }
 
-function handleReceivedPiece(pieceData, filename, fileLength, pieceLength, pieceIndex, pieceHash) {
+function handleReceivedPiece(pieceData, filename, fileLength, pieceLength, pieceIndex, pieceHash, pieceHashes) {
 	console.log(`Storing received piece ${pieceIndex} at your computer`);
 
 	// Implement logic to save the file

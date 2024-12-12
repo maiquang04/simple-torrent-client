@@ -11,4 +11,10 @@ urlpatterns = [
     path("download-file", views.download_file, name="download-file"),
     path("get-peer-id", views.get_peer_id, name="get-peer-id"),
     path("file-transfer", views.file_transfer, name="file-transfer"),
+    path("get-piece", views.get_piece, name="get-piece"),
+    path(
+        "handle-received-piece",
+        views.handle_received_piece,
+        name="handle-received-piece",
+    ),
 ]

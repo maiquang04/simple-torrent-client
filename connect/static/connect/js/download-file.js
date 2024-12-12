@@ -180,6 +180,7 @@ function sendPieceRequest(connection, pieceRange, pieces, torrentMeta) {
 		file_directory: torrentMeta.fileDirectory,
 		file_path: torrentMeta.filePath,
 		piece_length: torrentMeta.pieceLength,
+		piece_hashes: pieces,
 		piece_range: pieceRangeData,
 		sender_peer_id: senderPeerId,
 	};
