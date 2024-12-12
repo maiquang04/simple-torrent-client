@@ -63,7 +63,7 @@ function handleIncomingRequest(conn, data) {
 	}
 }
 
-async function getPiece(fileLength, filename, fileDirectory, filePath, pieceLength, pieceHash, pieceIndex) {
+function getPiece(fileLength, filename, fileDirectory, filePath, pieceLength, pieceHash, pieceIndex) {
 	// Logic to fetch or generate the requested piece
 	// const str = `Binary data for piece ${pieceIndex}`;
 	// console.log(str);
@@ -80,30 +80,30 @@ async function getPiece(fileLength, filename, fileDirectory, filePath, pieceLeng
 		pieceIndex,
 	};
 
-	try {
-		const response = await fetch(url, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(params),
+	return fetch(url, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(params),
+	})
+		.then((response) => {
+			if (!response.ok) {
+				throw new Error(`Error fetching piece: ${response.statusText}`);
+			}
+			return response.arrayBuffer(); // Adjusted to receive binary data
+		})
+		.then((binaryData) => {
+			console.log(`Fetched binary data for piece ${pieceIndex}.`);
+			return binaryData;
+		})
+		.catch((error) => {
+			console.error(`Failed to fetch piece ${pieceIndex}:`, error);
+			return null;
 		});
-
-		if (!response.ok) {
-			throw new Error(`Error fetching piece: ${response.statusText}`);
-		}
-
-		const binaryData = await response.text(); // Assuming the server sends binary data as a string
-		console.log(`Fetched binary data for piece ${pieceIndex}:`, binaryData);
-
-		return binaryData;
-	} catch (error) {
-		console.error(`Failed to fetch piece ${pieceIndex}:`, error);
-		return null;
-	}
 }
 
-async function handleReceivedPiece(pieceData, filename, fileLength, pieceLength, pieceIndex, pieceHash, pieceHashes) {
+function handleReceivedPiece(pieceData, filename, fileLength, pieceLength, pieceIndex, pieceHash, pieceHashes) {
 	const url = "/handle-received-piece";
 
 	const formData = new FormData();
@@ -115,24 +115,24 @@ async function handleReceivedPiece(pieceData, filename, fileLength, pieceLength,
 	formData.append("piece_hash", pieceHash);
 	pieceHashes.forEach((hash) => formData.append("piece_hashes", hash));
 
-	try {
-		const response = await fetch(url, {
-			method: "POST",
-			body: formData, // Using FormData to handle binary file upload
+	return fetch(url, {
+		method: "POST",
+		body: formData, // Using FormData to handle binary file upload
+	})
+		.then((response) => {
+			if (!response.ok) {
+				throw new Error(`Error sending piece: ${response.statusText}`);
+			}
+			return response.json();
+		})
+		.then((result) => {
+			console.log(`Server response for piece ${pieceIndex}:`, result);
+			return result;
+		})
+		.catch((error) => {
+			console.error(`Failed to send piece ${pieceIndex}:`, error);
+			return null;
 		});
-
-		if (!response.ok) {
-			throw new Error(`Error sending piece: ${response.statusText}`);
-		}
-
-		const result = await response.json();
-		console.log(`Server response for piece ${pieceIndex}:`, result);
-
-		return result;
-	} catch (error) {
-		console.error(`Failed to send piece ${pieceIndex}:`, error);
-		return null;
-	}
 }
 
 // Poll for peer ID every 1 second
