@@ -286,13 +286,32 @@ def handle_received_piece(request):
 
                 # Send request to tracker to seed file
                 # TODO
-
-                return JsonResponse(
-                    {
-                        "message": "File assembled successfully.",
-                        "file_path": assembled_file_path,
-                    }
+                success, message = (
+                    torrent_utils.send_request_to_seed_file_to_tracker(
+                        peer_id=request.session.get("peer_id"),
+                        current_directory=peer_directory,
+                        file_path=assembled_file_path,
+                        file_length=os.path.getsize(assembled_file_path),
+                        piece_length=CONFIGS["PIECE_LENGTH"],
+                        pieces=piece_hashes,
+                    )
                 )
+
+                if success:
+                    return JsonResponse(
+                        {
+                            "message": "File assembled and seeded successfully.",
+                            "file_path": assembled_file_path,
+                        }
+                    )
+                else:
+                    return JsonResponse(
+                        {
+                            "message": "File assembled but failed to seed.",
+                            "error": message,
+                        },
+                        status=500,
+                    )
 
             return JsonResponse(
                 {"message": "Piece received and saved successfully."}

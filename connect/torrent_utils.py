@@ -116,3 +116,57 @@ def upload_torrent_data_to_tracker(
 
     except Exception as e:
         return False, f"Error occured: {str(e)}"
+
+
+def send_request_to_seed_file_to_tracker(
+    peer_id, current_directory, file_path, file_length, piece_length, pieces
+):
+    """
+    Sends a POST request to the tracker to seed the file after successful assembly.
+    """
+    tracker_url = CONFIGS["TRACKER_URL"]
+    seed_file_url = f"{tracker_url}/seed-file"
+
+    # Prepare the info dictionary
+    info = {
+        "length": file_length,
+        "name": os.path.basename(file_path),
+        "piece length": piece_length,
+        "pieces": pieces,  # List of SHA1 hashes of the pieces
+    }
+
+    # Calculate the info_hash as the SHA1 hash of the bencoded info dictionary
+    bencoded_info = bencodepy.encode(info)
+    info_hash = hashlib.sha1(bencoded_info).hexdigest()
+
+    # Prepare the payload
+    payload = {
+        "peer_id": peer_id,
+        "current_directory": current_directory,
+        "file_path": file_path,
+        "file_length": file_length,
+        "piece_length": piece_length,
+        "info": info,
+        "info_hash": info_hash,  # Include the calculated info_hash
+    }
+
+    try:
+        # Send the POST request
+        response = requests.post(seed_file_url, json=payload)
+
+        # Check the response status
+        if response.status_code == 200:
+            response_data = response.json()
+            if response_data.get("success"):
+                return True, response_data.get(
+                    "message", "File seeded successfully."
+                )
+            else:
+                return False, response_data.get("error", "Failed to seed file.")
+        else:
+            return (
+                False,
+                f"Failed to connect to tracker. Status code: {response.status_code}",
+            )
+    except Exception as e:
+        return False, f"Error occurred while sending request: {str(e)}"
