@@ -38,19 +38,29 @@ function handleIncomingRequest(conn, data) {
 		// Iterate through piece_range to fetch and send each piece
 		piece_range.forEach((piece) => {
 			const { piece_index, piece_hash } = piece;
-			const pieceData = getPiece(file_length, filename, file_directory, file_path, piece_length, piece_hash, piece_index);
 
-			// Send back the piece data
-			conn.send({
-				type: "piece",
-				piece_data: pieceData,
-				filename: filename,
-				file_length: file_length,
-				piece_length: piece_length,
-				piece_index: piece_index,
-				piece_hash: piece_hash,
-				piece_hashes: piece_hashes,
-			});
+			getPiece(file_length, filename, file_directory, file_path, piece_length, piece_hash, piece_index)
+				.then((pieceData) => {
+					// Send back the resolved piece data
+					conn.send({
+						type: "piece",
+						piece_data: pieceData, // Resolved binary data
+						filename: filename,
+						file_length: file_length,
+						piece_length: piece_length,
+						piece_index: piece_index,
+						piece_hash: piece_hash,
+						piece_hashes: piece_hashes,
+					});
+				})
+				.catch((error) => {
+					console.error(`Failed to fetch piece ${piece_index}:`, error);
+					// Optionally, send an error response back to the requester
+					conn.send({
+						type: "error",
+						message: `Failed to fetch piece ${piece_index}`,
+					});
+				});
 		});
 	} else if (data.type === "piece") {
 		// Logic for handling file data (binary file)

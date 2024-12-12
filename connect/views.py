@@ -178,11 +178,19 @@ def get_piece(request):
     """
     if request.method == "POST":
         try:
-            # Extract required fields from the request
-            file_path = request.POST.get("file_path")
-            piece_length = int(request.POST.get("piece_length", 0))
-            piece_index = int(request.POST.get("piece_index", 0))
-            piece_hash = request.POST.get("piece_hash")
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
+
+            # Extract required fields from the parsed data
+            file_path = data.get("filePath")
+            piece_length = int(data.get("pieceLength", 0))
+            piece_index = int(data.get("pieceIndex", 0))
+            piece_hash = data.get("pieceHash")
+
+            print("File path:", file_path)
+            print("Piece length:", piece_length)
+            print("Piece index", piece_index)
+            print("Piece hash", piece_hash)
 
             if not file_path or not piece_hash:
                 return JsonResponse(
