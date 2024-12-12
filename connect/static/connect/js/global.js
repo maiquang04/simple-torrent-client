@@ -44,8 +44,26 @@ async function handleIncomingRequest(conn, data) {
 				const pieceData = await getPiece(file_length, filename, file_directory, file_path, piece_length, piece_hash, piece_index);
 
 				if (pieceData) {
-					// Send back the resolved piece data
-					conn.send({
+					// Check if we already have a connection to the sender peer
+					let senderPeerConn = connections[sender_peer_id];
+
+					// If no connection, establish a new one
+					if (!senderPeerConn) {
+						// Create a connection to the sender peer (Peer B)
+						senderPeerConn = peer.connect(sender_peer_id);
+
+						// Wait for the connection to open
+						await new Promise((resolve, reject) => {
+							senderPeerConn.on("open", resolve);
+							senderPeerConn.on("error", reject);
+						});
+
+						// Store the connection in the connections map
+						connections[sender_peer_id] = senderPeerConn;
+					}
+
+					// Now send the resolved piece data to the sender peer
+					senderPeerConn.send({
 						type: "piece",
 						piece_data: pieceData, // Resolved binary data
 						filename: filename,
@@ -74,9 +92,12 @@ async function handleIncomingRequest(conn, data) {
 	} else if (data.type === "piece") {
 		// Logic for handling file data (binary file)
 		console.log(`Received file data from ${data.sender_peer_id}`);
-
+		console.log("Incoming data:", data);
+		console.log("Calling handleReceivedPiece...");
 		// Handle piece data (binary)
-		handleReceivedPiece(data.piece_data, data.filename, data.file_length, data.piece_length, data.piece_index, data.piece_hash, data.piece_hashes);
+		const result = await handleReceivedPiece(data.piece_data, data.filename, data.file_length, data.piece_length, data.piece_index, data.piece_hash, data.piece_hashes);
+
+		console.log("Result after handle received piece:", result);
 	} else {
 		console.error("Unknown data type received:", data);
 	}
@@ -122,9 +143,10 @@ function getPiece(fileLength, filename, fileDirectory, filePath, pieceLength, pi
 		});
 }
 
-function handleReceivedPiece(pieceData, filename, fileLength, pieceLength, pieceIndex, pieceHash, pieceHashes) {
-	const url = "/handle-received-piece";
+async function handleReceivedPiece(pieceData, filename, fileLength, pieceLength, pieceIndex, pieceHash, pieceHashes) {
+	console.log("Handle received piece.");
 
+	const url = "/handle-received-piece";
 	const formData = new FormData();
 	formData.append("piece_data", new Blob([pieceData]));
 	formData.append("filename", filename);
@@ -134,24 +156,23 @@ function handleReceivedPiece(pieceData, filename, fileLength, pieceLength, piece
 	formData.append("piece_hash", pieceHash);
 	pieceHashes.forEach((hash) => formData.append("piece_hashes", hash));
 
-	return fetch(url, {
-		method: "POST",
-		body: formData, // Using FormData to handle binary file upload
-	})
-		.then((response) => {
-			if (!response.ok) {
-				throw new Error(`Error sending piece: ${response.statusText}`);
-			}
-			return response.json();
-		})
-		.then((result) => {
-			console.log(`Server response for piece ${pieceIndex}:`, result);
-			return result;
-		})
-		.catch((error) => {
-			console.error(`Failed to send piece ${pieceIndex}:`, error);
-			return null;
+	try {
+		const response = await fetch(url, {
+			method: "POST",
+			body: formData, // Using FormData to handle binary file upload
 		});
+
+		if (!response.ok) {
+			throw new Error(`Error sending piece: ${response.statusText}`);
+		}
+
+		const result = await response.json();
+		console.log(`Server response for piece ${pieceIndex}:`, result);
+		return result;
+	} catch (error) {
+		console.error(`Failed to send piece ${pieceIndex}:`, error);
+		return null;
+	}
 }
 
 // Poll for peer ID every 1 second

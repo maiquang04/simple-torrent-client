@@ -246,6 +246,11 @@ def handle_received_piece(request):
             piece_hashes = request.POST.getlist("piece_hashes")
             filename = request.POST.get("filename")
 
+            print("Piece data:", piece_data)
+            print("Piece hash:", piece_hash)
+            print("Piece hashes:", piece_hashes)
+            print("Filename:", filename)
+
             if (
                 not piece_data
                 or not piece_hash
