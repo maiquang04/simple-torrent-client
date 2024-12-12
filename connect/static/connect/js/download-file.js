@@ -95,12 +95,16 @@ function requestPiecesFromPeers(peers, torrentData) {
 
 	peers.forEach((peerInfo, index) => {
 		const peerId = peerInfo["peer_id"];
+		const fileDirectory = peerInfo["file_directory"]; // Get file_directory from peer list
+		const filePath = peerInfo["file_path"]; // Get file_path from peer list
 		const pieceRange = pieceRanges[index];
 
 		createPeerForRemoteId(peerId, pieceRange, pieces, {
 			fileLength,
 			filename,
 			pieceLength,
+			fileDirectory,
+			filePath,
 		});
 	});
 }
@@ -167,13 +171,19 @@ function sendPieceRequest(connection, pieceRange, pieces, torrentMeta) {
 			  }))
 			: [];
 
+	const senderPeerId = JSON.parse(document.getElementById("django-sender-peer-id").textContent);
+
 	const requestData = {
 		type: "request",
 		file_length: torrentMeta.fileLength,
 		filename: torrentMeta.filename,
+		file_directory: torrentMeta.fileDirectory,
+		file_path: torrentMeta.filePath,
 		piece_length: torrentMeta.pieceLength,
 		piece_range: pieceRangeData,
+		sender_peer_id: senderPeerId,
 	};
 
+	console.log(`Sending request to peer ${connection.peer}:`, requestData);
 	connection.send(requestData);
 }

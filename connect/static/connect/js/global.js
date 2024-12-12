@@ -31,22 +31,25 @@ function initializePeer(peerId) {
 function handleIncomingRequest(conn, data) {
 	if (data.type === "request") {
 		// Logic for handling piece request (JSON data)
-		const { file_length, filename, file_directory, file_path, piece_length, piece_hash, piece_index, sender_peer_id } = data;
+		const { file_length, filename, file_directory, file_path, piece_length, piece_range, sender_peer_id } = data;
 
-		console.log(`Received request from ${sender_peer_id} for piece index: ${piece_index}`);
+		console.log(`Received request from ${sender_peer_id} from piece index: ${piece_range[0]["piece_index"]} to piece index: ${piece_range.at(-1)["piece_index"]}.`);
 
-		// Simulate fetching the requested piece from the file or data store
-		const pieceData = getPiece(file_length, filename, file_directory, file_path, piece_length, piece_hash, piece_index);
+		// Iterate through piece_range to fetch and send each piece
+		piece_range.forEach((piece) => {
+			const { piece_index, piece_hash } = piece;
+			const pieceData = getPiece(file_length, filename, file_directory, file_path, piece_length, piece_hash, piece_index);
 
-		// Send back the piece data
-		conn.send({
-			type: "piece",
-			piece_data: pieceData,
-			filename: filename,
-			file_length: file_length,
-			piece_length: piece_length,
-			piece_index: piece_index,
-			piece_hash: piece_hash,
+			// Send back the piece data
+			conn.send({
+				type: "piece",
+				piece_data: pieceData,
+				filename: filename,
+				file_length: file_length,
+				piece_length: piece_length,
+				piece_index: piece_index,
+				piece_hash: piece_hash,
+			});
 		});
 	} else if (data.type === "piece") {
 		// Logic for handling file data (binary file)
@@ -72,7 +75,7 @@ function handleReceivedPiece(pieceData, filename, fileLength, pieceLength, piece
 	// Implement logic to save the file
 }
 
-// Poll for peer ID every 10 seconds
+// Poll for peer ID every 1 second
 function pollForPeerId() {
 	const interval = setInterval(() => {
 		console.log("Polling...");
