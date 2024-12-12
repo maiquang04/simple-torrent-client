@@ -1,7 +1,7 @@
 import { Configs } from "./configs.js";
 
-let peer = null;
 let connections = {};
+let activePeers = [];
 
 document.addEventListener("DOMContentLoaded", function () {
 	const downloadButton = document.getElementById("download-btn");
@@ -23,21 +23,10 @@ document.addEventListener("DOMContentLoaded", function () {
 		// Ensure no default form submission
 		if (torrentForm.onsubmit) {
 			torrentForm.onsubmit = function (e) {
-				console.log("Here");
 				e.preventDefault();
 				return false;
 			};
 		}
-
-		// console.log("Create peer");
-
-		// const peer = new Peer("2-e389746d269843b09b62470f182e451aa");
-
-		// let conn = peer.connect("3-c64dadbc55c34a2691412ed9708e08eb");
-
-		// conn.on("open", () => {
-		// 	console.log("Connected to:", "3-c64dadbc55c34a2691412ed9708e08eb");
-		// });
 
 		isFetching = true; // Set flag to indicate fetch is in progress
 		const formData = new FormData(torrentForm);
@@ -72,8 +61,7 @@ document.addEventListener("DOMContentLoaded", function () {
 							console.log("Peers:", peers);
 							statusMessage.innerText = "Successfully get peer list!";
 
-							// continue
-							initializePeer();
+							// Step 3: Get pieces
 							requestPiecesFromPeers(peers, decodedData);
 						} else {
 							statusMessage.innerText = "Failed to retrieve peer list.";
@@ -95,108 +83,97 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 });
 
-function initializePeer() {
-	// Ensure Peer is properly initialized
-	if (window.Peer) {
-		peer = new Peer({
-			debug: 2, // Enables all logging
-		});
-
-		// Listen for incoming connections
-		peer.on("connection", (conn) => {
-			console.log("Incoming connection from peer:", conn.peer);
-
-			conn.on("data", (data) => {
-				console.log("Received data from peer:", data);
-				// Handle incoming data
-			});
-
-			conn.on("close", () => {
-				console.log("Connection closed with peer:", conn.peer);
-			});
-		});
-
-		peer.on("open", (id) => {
-			console.log(`Download peer initialized with ID: ${id}`);
-		});
-
-		peer.on("error", (err) => {
-			console.error("Peer error:", err);
-			statusMessage.textContent = `Peer Error: ${err.message}`;
-		});
-	} else {
-		console.error("PeerJS library not loaded");
-		statusMessage.textContent = "PeerJS library not loaded";
-	}
-}
-
 function requestPiecesFromPeers(peers, torrentData) {
-	if (!peer) {
-		console.error("Peer not initialized");
-		return;
-	}
-
 	const torrentInfo = torrentData["info"];
 	const pieces = torrentInfo["pieces"];
 	const pieceLength = torrentInfo["piece length"];
 	const fileLength = torrentInfo["length"];
 	const filename = torrentInfo["name"];
 
-	console.log("Torrent info:", torrentInfo);
-	console.log("Pieces:", pieces);
+	const totalPieces = pieces.length;
+	const pieceRanges = divideRanges(totalPieces, peers.length);
 
-	// Fetch the current peer ID
-	fetch("/get-peer-id")
-		.then((response) => response.json())
-		.then((peerIdData) => {
-			if (peerIdData.error) {
-				throw new Error(peerIdData.error);
-			}
+	peers.forEach((peerInfo, index) => {
+		const peerId = peerInfo["peer_id"];
+		const pieceRange = pieceRanges[index];
 
-			const senderPeerId = peerIdData.peerId;
-			console.log("Sender peer ID:", senderPeerId);
-
-			pieces.forEach((pieceHash, index) => {
-				// Select peer in a round-robin fashion
-				const peerInfo = peers[index % peers.length];
-				const peerId = peerInfo["peer_id"];
-				const peerFileDirectory = peerInfo["file_directory"];
-				const peerFilePath = peerInfo["file_path"];
-
-				// Establish connection to each peer
-				let conn = peer.connect(peerId, {
-					reliable: true, // Ensure reliable connection
-				});
-
-				conn.on("open", () => {
-					console.log(`Requesting piece ${index} from peer: ${peerId}`);
-
-					const requestData = {
-						type: "request",
-						file_length: fileLength,
-						filename: filename,
-						file_directory: peerFileDirectory,
-						file_path: peerFilePath,
-						piece_length: pieceLength,
-						piece_hash: pieceHash,
-						piece_index: index,
-						sender_peer_id: senderPeerId,
-					};
-
-					conn.send(requestData);
-				});
-
-				conn.on("data", (response) => {
-					console.log(`Download peer received:`, response);
-					// Handle the received piece data
-				});
-
-				conn.on("error", (err) => {
-					console.error(`Connection error with peer ${peerId}:`, err);
-				});
-			});
-		})
-		.catch((error) => {
-			console.error("Error in requesting pieces:", error);
+		createPeerForRemoteId(peerId, pieceRange, pieces, {
+			fileLength,
+			filename,
+			pieceLength,
 		});
+	});
+}
+
+function divideRanges(totalPieces, numPeers) {
+	const rangeSize = Math.ceil(totalPieces / numPeers);
+	const ranges = [];
+
+	for (let i = 0; i < numPeers; i++) {
+		const start = i * rangeSize;
+		const end = Math.min(start + rangeSize, totalPieces);
+		ranges.push({ start, end });
+	}
+
+	return ranges;
+}
+
+function createPeerForRemoteId(remotePeerId, pieceRange, pieces, torrentMeta) {
+	if (connections[remotePeerId]) {
+		console.log(`Reusing existing connection for peer ${remotePeerId}`);
+		const connection = connections[remotePeerId];
+		sendPieceRequest(connection, pieceRange, pieces, torrentMeta);
+		return;
+	}
+
+	const peer = new Peer();
+	activePeers.push(peer); // Add peer to the active list
+
+	peer.on("open", (id) => {
+		const connection = peer.connect(remotePeerId);
+
+		connection.on("open", () => {
+			console.log(`Connected to remote peer ID: ${remotePeerId}`);
+			connections[remotePeerId] = connection; // Save the connection
+
+			sendPieceRequest(connection, pieceRange, pieces, torrentMeta);
+		});
+
+		connection.on("data", (response) => {
+			console.log(`Received data from remote peer ${remotePeerId}:`, response);
+			// Handle the received piece data
+		});
+
+		connection.on("error", (err) => {
+			console.error(`Connection error with peer ${remotePeerId}:`, err);
+		});
+
+		connection.on("close", () => {
+			console.log(`Connection closed with peer ${remotePeerId}`);
+			delete connections[remotePeerId];
+		});
+	});
+	peer.on("error", (err) => {
+		console.error(`Error initializing peer for remote peer ID ${remotePeerId}:`, err);
+	});
+}
+
+function sendPieceRequest(connection, pieceRange, pieces, torrentMeta) {
+	const pieceRangeData =
+		pieceRange.start < pieceRange.end
+			? pieces.slice(pieceRange.start, pieceRange.end).map((pieceHash, index) => ({
+					piece_hash: pieceHash,
+					piece_index: pieceRange.start + index,
+			  }))
+			: [];
+
+	const requestData = {
+		type: "request",
+		file_length: torrentMeta.fileLength,
+		filename: torrentMeta.filename,
+		piece_length: torrentMeta.pieceLength,
+		piece_range: pieceRangeData,
+	};
+
+	connection.send(requestData);
 }

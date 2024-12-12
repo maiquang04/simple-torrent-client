@@ -2,7 +2,7 @@ import { Configs } from "./configs.js";
 
 let peer = null;
 let connections = {};
-const pollInterval = 10000; // 10 seconds
+const pollInterval = 1000; // 1 second
 
 function initializePeer(peerId) {
 	peer = new Peer(peerId);
@@ -61,7 +61,7 @@ function handleIncomingRequest(conn, data) {
 
 function getPiece(fileLength, filename, fileDirectory, filePath, pieceLength, pieceHash, pieceIndex) {
 	// Logic to fetch or generate the requested piece
-	const str = `Binary data for piece ${index}`;
+	const str = `Binary data for piece ${pieceIndex}`;
 	console.log(str);
 	return str;
 }
