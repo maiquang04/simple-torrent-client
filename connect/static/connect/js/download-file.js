@@ -13,11 +13,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	downloadButton.addEventListener("click", function (e) {
 		e.preventDefault();
+		e.stopPropagation();
 
 		if (isFetching) {
 			statusMessage.innerText = "A request is already in progress. Please wait.";
 			return;
 		}
+
+		// Ensure no default form submission
+		if (torrentForm.onsubmit) {
+			torrentForm.onsubmit = function (e) {
+				console.log("Here");
+				e.preventDefault();
+				return false;
+			};
+		}
+
+		// console.log("Create peer");
+
+		// const peer = new Peer("2-e389746d269843b09b62470f182e451aa");
+
+		// let conn = peer.connect("3-c64dadbc55c34a2691412ed9708e08eb");
+
+		// conn.on("open", () => {
+		// 	console.log("Connected to:", "3-c64dadbc55c34a2691412ed9708e08eb");
+		// });
 
 		isFetching = true; // Set flag to indicate fetch is in progress
 		const formData = new FormData(torrentForm);
@@ -76,48 +96,64 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function initializePeer() {
-	peer = new Peer();
-
-	// Listen for incoming connections
-	peer.on("connection", (conn) => {
-		console.log("Connected to peer:", conn.peer);
-
-		conn.on("data", (data) => {
-			console.log("Received data from peer:", data);
+	// Ensure Peer is properly initialized
+	if (window.Peer) {
+		peer = new Peer({
+			debug: 2, // Enables all logging
 		});
-	});
 
-	peer.on("open", (id) => {
-		console.log(`Download peer initialized with ID: ${id}`);
-	});
+		// Listen for incoming connections
+		peer.on("connection", (conn) => {
+			console.log("Incoming connection from peer:", conn.peer);
 
-	peer.on("error", (err) => {
-		console.error("Peer error:", err);
-	});
+			conn.on("data", (data) => {
+				console.log("Received data from peer:", data);
+				// Handle incoming data
+			});
+
+			conn.on("close", () => {
+				console.log("Connection closed with peer:", conn.peer);
+			});
+		});
+
+		peer.on("open", (id) => {
+			console.log(`Download peer initialized with ID: ${id}`);
+		});
+
+		peer.on("error", (err) => {
+			console.error("Peer error:", err);
+			statusMessage.textContent = `Peer Error: ${err.message}`;
+		});
+	} else {
+		console.error("PeerJS library not loaded");
+		statusMessage.textContent = "PeerJS library not loaded";
+	}
 }
 
 function requestPiecesFromPeers(peers, torrentData) {
-	// Logic here
+	if (!peer) {
+		console.error("Peer not initialized");
+		return;
+	}
+
 	const torrentInfo = torrentData["info"];
 	const pieces = torrentInfo["pieces"];
 	const pieceLength = torrentInfo["piece length"];
 	const fileLength = torrentInfo["length"];
 	const filename = torrentInfo["name"];
 
-	print("Torrent info:", torrentInfo);
-	print("Pieces:", pieces);
+	console.log("Torrent info:", torrentInfo);
+	console.log("Pieces:", pieces);
 
 	// Fetch the current peer ID
 	fetch("/get-peer-id")
 		.then((response) => response.json())
 		.then((peerIdData) => {
 			if (peerIdData.error) {
-				console.error("Error fetching sender_peer_id:", peerIdData.error);
-				return;
+				throw new Error(peerIdData.error);
 			}
 
 			const senderPeerId = peerIdData.peerId;
-
 			console.log("Sender peer ID:", senderPeerId);
 
 			pieces.forEach((pieceHash, index) => {
@@ -127,16 +163,10 @@ function requestPiecesFromPeers(peers, torrentData) {
 				const peerFileDirectory = peerInfo["file_directory"];
 				const peerFilePath = peerInfo["file_path"];
 
-				// console.log("Peer info:", peerInfo);
-
-				// if (!connections[peerId]) {
-				// 	console.log("Set up connection");
-				// 	connections[peerId] = peer.connect(peerId);
-				// }
-
-				// const conn = connections[peerId];
-
-				const conn = peer.connect(peerId);
+				// Establish connection to each peer
+				let conn = peer.connect(peerId, {
+					reliable: true, // Ensure reliable connection
+				});
 
 				conn.on("open", () => {
 					console.log(`Requesting piece ${index} from peer: ${peerId}`);
@@ -154,15 +184,19 @@ function requestPiecesFromPeers(peers, torrentData) {
 					};
 
 					conn.send(requestData);
+				});
 
-					// Handle response
-					conn.on("data", (response) => {
-						console.log(`Download peer received ${response}`);
-					});
+				conn.on("data", (response) => {
+					console.log(`Download peer received:`, response);
+					// Handle the received piece data
+				});
+
+				conn.on("error", (err) => {
+					console.error(`Connection error with peer ${peerId}:`, err);
 				});
 			});
 		})
 		.catch((error) => {
-			console.error("Error fetching sender_peer_id:", error);
+			console.error("Error in requesting pieces:", error);
 		});
 }

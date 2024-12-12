@@ -1,0 +1,39 @@
+{% extends "connect/layout.html" %}
+
+{% load static %}
+
+{% block extra_js %}
+<script src="{% static 'connect/js/file-transfer.js' %}"></script>
+{% endblock %}
+
+{% block title %}
+File Transfer
+{% endblock %}
+
+{% block body %}
+
+<h1>File Transfer</h1>
+
+<div>
+    <h6 for="peer-id">
+        Your Peer ID: <span id="peer-id"></span>
+    </h6>
+</div>
+<div>
+    <label for="remote-peer-id">Connect to Peer ID:</label>
+    <input type="text" id="remote-peer-id" style="width: 300px; height: 40px;" placeholder="Enter peer ID">
+    <button id="connect">Connect</button>
+</div>
+<div>
+    <label for="file-input">Select File:</label>
+    <input type="file" id="file-input">
+    <button id="send-file">Send File</button>
+</div>
+<div>
+    <h3>Received Files:</h3>
+    <ul id="received-files"></ul>
+</div>
+
+{{ peer_id|json_script:"django-peer-id" }}
+
+{% endblock %}

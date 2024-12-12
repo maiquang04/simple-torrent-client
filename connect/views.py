@@ -161,3 +161,9 @@ def get_peer_id(request):
     if peer_id:
         return JsonResponse({"peerId": request.session["peer_id"]}, status=200)
     return JsonResponse({"error": "Peer ID not found"}, status=400)
+
+
+def file_transfer(request):
+    peer_id = request.session.get("peer_id", None)
+
+    return render(request, "connect/file-transfer.html", {"peer_id": peer_id})
