@@ -11,7 +11,7 @@ function initializePeer(peerId) {
 	peer.on("connection", (conn) => {
 		console.log("Connected to peer:", conn.peer);
 
-		connections[conn.peer] = conn;
+		// connections[conn.peer] = conn;
 
 		conn.on("data", (data) => {
 			// Handle received requests

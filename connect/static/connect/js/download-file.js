@@ -11,7 +11,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	let isFetching = false; // Flag to track if a fetch request is in progress
 
-	downloadButton.addEventListener("click", function () {
+	downloadButton.addEventListener("click", function (e) {
+		e.preventDefault();
+
 		if (isFetching) {
 			statusMessage.innerText = "A request is already in progress. Please wait.";
 			return;
@@ -102,6 +104,9 @@ function requestPiecesFromPeers(peers, torrentData) {
 	const fileLength = torrentInfo["length"];
 	const filename = torrentInfo["name"];
 
+	print("Torrent info:", torrentInfo);
+	print("Pieces:", pieces);
+
 	// Fetch the current peer ID
 	fetch("/get-peer-id")
 		.then((response) => response.json())
@@ -113,6 +118,8 @@ function requestPiecesFromPeers(peers, torrentData) {
 
 			const senderPeerId = peerIdData.peerId;
 
+			console.log("Sender peer ID:", senderPeerId);
+
 			pieces.forEach((pieceHash, index) => {
 				// Select peer in a round-robin fashion
 				const peerInfo = peers[index % peers.length];
@@ -120,11 +127,16 @@ function requestPiecesFromPeers(peers, torrentData) {
 				const peerFileDirectory = peerInfo["file_directory"];
 				const peerFilePath = peerInfo["file_path"];
 
-				if (!connections[peerId]) {
-					connections[peerId] = peer.connect(peerId);
-				}
+				// console.log("Peer info:", peerInfo);
 
-				const conn = connections[peerId];
+				// if (!connections[peerId]) {
+				// 	console.log("Set up connection");
+				// 	connections[peerId] = peer.connect(peerId);
+				// }
+
+				// const conn = connections[peerId];
+
+				const conn = peer.connect(peerId);
 
 				conn.on("open", () => {
 					console.log(`Requesting piece ${index} from peer: ${peerId}`);
