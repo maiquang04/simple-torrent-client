@@ -179,6 +179,8 @@ async function handleReceivedPiece(pieceData, filename, fileLength, pieceLength,
 			stopTimer(); // Stop the timer if file is assembled but seeding failed
 		}
 
+		document.getElementById(`chunk-${pieceIndex}`).classList.add("blue");
+
 		return result;
 	} catch (error) {
 		console.error(`Failed to send piece ${pieceIndex}:`, error);

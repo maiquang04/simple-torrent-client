@@ -15,3 +15,33 @@ a {
 	font-size: 20px;
 	font-weight: 600;
 }
+
+.progress {
+	display: flex;
+	width: 100%;
+	height: 100px; /* Adjust the height as needed */
+	background-color: #f0f0f0; /* Optional background for progress container */
+	margin: 10px 0;
+	border-radius: 5px;
+	overflow: hidden;
+}
+
+.chunk {
+	flex: 1;
+	background-color: #ccc; /* Default color for chunks */
+	border-right: 1px solid #fff; /* Optional spacing effect */
+	color: #fff;
+	font-size: 16px;
+	font-weight: 800;
+	align-items: center;
+	display: flex;
+	justify-content: center;
+}
+
+.chunk:last-child {
+	border-right: none; /* Remove border for the last chunk */
+}
+
+.chunk.blue {
+	background-color: #007bff; /* Blue color for selected chunks */
+}

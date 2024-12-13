@@ -6,13 +6,23 @@ let timerStart = 0;
 let timerInterval = null;
 const updateTimerInterval = 1; // 0.1s
 
+const progressBar = document.querySelector("div .progress");
+
 document.addEventListener("DOMContentLoaded", function () {
 	const downloadButton = document.getElementById("download-btn");
 	const torrentForm = document.getElementById("torrent-form");
 	const statusMessage = document.getElementById("status-message");
 	const torrentFile = document.getElementById("torrent-file");
 
+	if (torrentFile) {
+		torrentFile.addEventListener("change", () => {
+			downloadButton.disabled = !torrentFile.value;
+		});
+	}
+
 	let isFetching = false; // Flag to track if a fetch request is in progress
+
+	if (!downloadButton) return;
 
 	downloadButton.addEventListener("click", function (e) {
 		e.preventDefault();
@@ -32,6 +42,9 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 
 		startTimer();
+
+		progressBar.innerHTML = "";
+
 		isFetching = true; // Set flag to indicate fetch is in progress
 		const formData = new FormData(torrentForm);
 
@@ -96,6 +109,14 @@ function requestPiecesFromPeers(peers, torrentData) {
 
 	const totalPieces = pieces.length;
 	const pieceRanges = divideRanges(totalPieces, peers.length);
+
+	for (let i = 0; i < totalPieces; i++) {
+		const chunk = document.createElement("div");
+		chunk.className = "chunk";
+		chunk.id = `chunk-${i}`;
+		chunk.innerText = i + 1;
+		progressBar.appendChild(chunk);
+	}
 
 	peers.forEach((peerInfo, index) => {
 		const peerId = peerInfo["peer_id"];
