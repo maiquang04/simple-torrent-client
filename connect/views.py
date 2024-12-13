@@ -286,12 +286,12 @@ def handle_received_piece(request):
 
                 # Send request to tracker to seed file
                 # Test
-                return JsonResponse(
-                    {
-                        "message": "File assembled and seeded successfully.",
-                        "file_path": assembled_file_path,
-                    }
-                )
+                # return JsonResponse(
+                #     {
+                #         "message": "File assembled and seeded successfully.",
+                #         "file_path": assembled_file_path,
+                #     }
+                # )
 
                 # TODO
                 success, message = (
